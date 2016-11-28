@@ -1,6 +1,6 @@
-Fldbg, a Pykd script to debug FlashPlayer
+#Fldbg, a Pykd script to debug FlashPlayer
 
-Please in Firefox change the following configuration in about:config
+**Please in Firefox change the following configuration in about:config**
 dom.ipc.plugins.hangUITimeoutSecs = 0
 dom.ipc.plugins.contentTimeoutSecs = 0
 dom.ipc.plugins.processLaunchTimeoutSecs = 0
