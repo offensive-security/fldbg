@@ -15,14 +15,14 @@ import pykd
 import fnmatch, struct, sys, time, pickle, tempfile, os
 from optparse import OptionParser
 
-func_sigs = {'setNative':		 	'8B 41 08 80 78 38 00 8b 44 24 04 74 10',
-			 'setJit':			 	'8B 4C 24 08 56 8B 74 24 08 8B 46 30 25',
-			 'setInterp':		 	'33 c0 38 44 24 0c 53 55 0f 95 c0',
-			 'getMethodName':	 	'8B 41 10 A8 01 74 13 83 E0 FE 74 0C 8B',
-			 'FixedMalloc::OutOfLineAlloc': '81 FA F0 07 00 00',
-			 'FixedMalloc::LargeAlloc': 	'33 c9 05 00 10 00 00',
-			 'GCAlloc::Alloc':			 	'8B 46 20 29 81 AC 01 00 00',
-			 }
+func_sigs = {'setNative':		'8B 41 08 80 78 38 00 8b 44 24 04 74 10',
+		'setJit':		'8B 4C 24 08 56 8B 74 24 08 8B 46 30 25',
+		'setInterp':		'33 c0 38 44 24 0c 53 55 0f 95 c0',
+		'getMethodName':	'8B 41 10 A8 01 74 13 83 E0 FE 74 0C 8B',
+		'FixedMalloc::OutOfLineAlloc':	'81 FA F0 07 00 00',
+		'FixedMalloc::LargeAlloc': 	'33 c9 05 00 10 00 00',
+		'GCAlloc::Alloc':		'8B 46 20 29 81 AC 01 00 00',
+}
 			 
 fixedmalloc_funcs_sigs = {
 	'cmp esi,7F0h': '81 FE F0 07 00 00', # cmp esi, 7F0h
@@ -32,7 +32,7 @@ fixedmalloc_funcs_sigs = {
 	'cmp edx,7F0h': '81 FA F0 07 00 00', # cmp edx, 7F0h # OutOfLineAlloc sig.
 	'cmp ebx,7F0h': '81 fb f0 07 00 00', # cmp ebx, 7f0h # one in 18.0.0.360
 	'cmp ecx,7F0h': '81 f9 f0 07 00 00', # cmp ecx, 7F0h # never found this sig.
-			 }
+}
 			 
 # From AVM source code:
 # FixedMalloc::kSizeClassIndex[kMaxSizeClassIndex]
@@ -85,16 +85,16 @@ class ExceptionHandler(pykd.eventHandler):
 		pykd.eventHandler.__init__(self)
 		self.count = 0
 		self.exception_occurred = False
-		self.interesting_exceptions = {0x80000001: "GUARD_PAGE_VIOLATION",
-									   0x80000005: "BUFFER_OVERFLOW",
-									   0xC0000005: "ACCESS_VIOLATION",
-									   0xC000001D: "ILLEGAL_INSTRUCTION",
-									   0xC0000144: "UNHANDLED_EXCEPTION",
-									   0xC0000409: "STACK_BUFFER_OVERRUN",
-									   0xC0000602: "UNKNOWN_EXCEPTION",
-									   0xC00000FD: "STACK_OVERFLOW",
-									   0xC000009D: "PRIVILEGED_INSTRUCTION",
-									   0x80000003: "BREAK_INSTRUCTION"}
+		self.interesting_exceptions = {	0x80000001: "GUARD_PAGE_VIOLATION",
+						0x80000005: "BUFFER_OVERFLOW",
+						0xC0000005: "ACCESS_VIOLATION",
+						0xC000001D: "ILLEGAL_INSTRUCTION",
+						0xC0000144: "UNHANDLED_EXCEPTION",
+						0xC0000409: "STACK_BUFFER_OVERRUN",
+						0xC0000602: "UNKNOWN_EXCEPTION",
+						0xC00000FD: "STACK_OVERFLOW",
+						0xC000009D: "PRIVILEGED_INSTRUCTION",
+						0x80000003: "BREAK_INSTRUCTION"}
 		self.exception_info = None
 
 	def exceptionOccurred(self):
@@ -164,15 +164,15 @@ def calcJmp(from_addr, to_addr):
 		
 def writeHookJit(hook_address):
 	"""Write the code for the setJit hook"""
-	# 0:  60              pusha							# save registers
-	# 1:  89 f9           mov  ecx,edi					# edi = MethodInfo 
+	# 0:  60              pusha				# save registers
+	# 1:  89 f9           mov  ecx,edi			# edi = MethodInfo 
 	# 3:  30 d2           xor  dl,dl
-	# 5:  b8 XX XX XX XX  mov  eax,0xXXXXXXXX			# load getMethodName 
-	#					 								# address
-	# a:  ff d0           call eax						# call getMethodName
-	# c:  61              popa							# restore registers
+	# 5:  b8 XX XX XX XX  mov  eax,0xXXXXXXXX		# load getMethodName 
+	#					 		# address
+	# a:  ff d0           call eax				# call getMethodName
+	# c:  61              popa				# restore registers
 	# d:  8b 4c 24 08     mov ecx,dword ptr [esp+0x8]	# first instruction
-	#					 								# of setJit
+	#					 		# of setJit
 	absaddr = setJit = ""
 	for b in struct.pack("<L",(func_addr['getMethodName'])):
 		absaddr += hex(struct.unpack("B",b)[0]).split("0x")[1] + " "
@@ -186,14 +186,14 @@ def writeHookJit(hook_address):
 	
 def writeHookNative(hook_address):
 	"""Write the code for the setNative hook"""
-	# 0:  60              pusha  					  # save registers
-	# 1:  8B CE           mov  ecx,esi				  # esi = MethodInfo 
+	# 0:  60              pusha  				# save registers
+	# 1:  8B CE           mov  ecx,esi			# esi = MethodInfo 
 	# 3:  30 d2           xor  dl,dl
-	# 5:  b8 XX XX XX XX  mov  eax,0xXXXXXXXX		  # load getMethodName 
-	#												  # address
-	# a:  ff d0           call eax				  	  # call getMethodName
-	# c:  61              popa						  # restore registers
-	# d:  8b 41 08	      mov eax,dword ptr [ecx+0x8] # first inst of setNative
+	# 5:  b8 XX XX XX XX  mov  eax,0xXXXXXXXX		# load getMethodName 
+	#							# address
+	# a:  ff d0           call eax				# call getMethodName
+	# c:  61              popa				# restore registers
+	# d:  8b 41 08	      mov eax,dword ptr [ecx+0x8] 	# first inst of setNative
 	#
 	absaddr = setNative = ""
 	for b in struct.pack("<L",(func_addr['getMethodName'])):
@@ -208,17 +208,17 @@ def writeHookNative(hook_address):
 
 def writeHookInterp(hook_address):
 	"""Write the code for the setNative hook"""
-	# 0:  60              pusha  					  # save registers
-	# 1:  89 D9           mov  ecx,ebx				  # ebx = MethodInfo
-	# 1:  8b 4c 24 24	  mov  ecx,[esp+24]			  # poi(esp+24) = address of
-	#												  # the func we want
-	#												  # to name
+	# 0:  60              pusha  				# save registers
+	# 1:  89 D9           mov  ecx,ebx			# ebx = MethodInfo
+	# 1:  8b 4c 24 24     mov  ecx,[esp+24]			# poi(esp+24) = address of
+	#							# the func we want
+	#							# to name
 	# 3:  30 d2           xor  dl,dl
-	# 5:  b8 ff ff ff ff  mov  eax,0xffffffff		  # load getMethodName 
-	#												  # address
-	# a:  ff d0           call eax				  	  # call getMethodName
-	# c:  61              popa						  # restore registers
-	# d:  33 C0      	  xor eax, eax				  # first inst of setInterp
+	# 5:  b8 ff ff ff ff  mov  eax,0xffffffff		# load getMethodName 
+	#							# address
+	# a:  ff d0           call eax				# call getMethodName
+	# c:  61              popa				# restore registers
+	# d:  33 C0      	  xor eax, eax			# first inst of setInterp
 	#
 	global NPS
 	NPS["SetInterpRet"] = findAllocRets('setInterp', None, 
@@ -343,7 +343,7 @@ def func_breakpoints(methodName, methodAddr):
 				print "[*] Setting break point on %s at address: 0x%x" %\
 					(methodName,methodAddr)
 				#GBP[methodName] = pykd.setBp(methodAddr, 
-				#							 lambda: functionHandler(methodName))
+				#lambda: functionHandler(methodName))
 				pykd.dbgCommand("bp 0x%x" % methodAddr)
 	# Breakpoints on any function matching a string like breakpoint on any 
 	# function containing the string LoaderInfo
@@ -352,7 +352,7 @@ def func_breakpoints(methodName, methodAddr):
 				print "[*] Setting break point on %s at address: 0x%x" %\
 					(methodName,methodAddr)
 				#GBP[methodName] = pykd.setBp(methodAddr, 
-				#							 lambda: functionHandler(methodName))
+				#lambda: functionHandler(methodName))
 				pykd.dbgCommand("bp 0x%x" % methodAddr)
 	# Heap monitor breakpoints
 	if GBP["StartMonitorOnFunc"]:
@@ -460,7 +460,7 @@ def allocHandlerFixedMalloc(ret_addr):
 		req_size = pykd.reg(reg32)
 		GBP["FixedMallocBPs"][ret] = pykd.setBp(ret, 
 							  lambda: allocServedFixedMalloc(ret, 
-															 req_size))
+										req_size))
 		return pykd.executionStatus.NoChange
 	except IndexError:
 		print "[!] Could not extract the register for the follwing"\
@@ -488,8 +488,8 @@ def allocHandlerGCAlloc(rets):
 	for ret in findAllocRets('GCAlloc::Alloc', func_sigs_ends['GCAllocEnd'], 
 							 ["\xC2", "\x04", "\x00"]):
 		GBP["GCAllocBPs"][ret] = pykd.setBp(ret, 
-										lambda: allocServedGCAlloc(req_size, 
-										ret, GCAlloc, Partition))
+						lambda: allocServedGCAlloc(req_size, 
+						ret, GCAlloc, Partition))
 	return pykd.executionStatus.NoChange
 	
 def allocHandlerFixedMallocOutOfLineAlloc(rets):
@@ -500,7 +500,7 @@ def allocHandlerFixedMallocOutOfLineAlloc(rets):
 	req_size = pykd.reg("edx")
 	for ret in rets:
 		GBP[ret] = pykd.setBp(ret, 
-					lambda: allocServedFixedMallocOutOfLineAlloc(req_size, ret))
+			lambda: allocServedFixedMallocOutOfLineAlloc(req_size, ret))
 	return pykd.executionStatus.NoChange
 
 def allocHandlerFixedMallocLargeAlloc(rets):
@@ -552,18 +552,18 @@ def allocServedFixedMallocOutOfLineAlloc(allocsize, ret):
 			# FixedAlloc allocator
 			allocator = pykd.ptrPtr((allocaddress & 0xfffff000)+0x1C)
 			# FixedAlloc.h#L120
-			# GCHeap *m_heap;             //The heap from which we 
-			#							  //obtain memory
-			# int m_heapPartition;		  //The heap partition from which we
-			#							  //obtain memory
-			# uint32_t m_itemsPerBlock;   //Number of items that fit in a block
-			# uint32_t m_itemSize;        //Size of each individual item
-			# FixedBlock* m_firstBlock;   //First block on list of free blocks
-			# FixedBlock* m_lastBlock;    //Last block on list of free blocks
-			# FixedBlock* m_firstFree;    //The lowest priority block that has 
-			#							  //free items
-			# size_t    m_numBlocks;      //Number of blocks owned by this 
-			#							  //allocator
+			# GCHeap *m_heap;            	//The heap from which we 
+			#				//obtain memory
+			# int m_heapPartition;		//The heap partition from which we
+			#				//obtain memory
+			# uint32_t m_itemsPerBlock;	//Number of items that fit in a block
+			# uint32_t m_itemSize;		//Size of each individual item
+			# FixedBlock* m_firstBlock;	//First block on list of free blocks
+			# FixedBlock* m_lastBlock;	//Last block on list of free blocks
+			# FixedBlock* m_firstFree;	//The lowest priority block that has 
+			#				//free items
+			# size_t    m_numBlocks;	//Number of blocks owned by this 
+			#				//allocator
 			if IsheapIsolVersion():
 				heapPartition =  pykd.ptrPtr(allocator+0x4)
 			else:
@@ -649,18 +649,18 @@ def allocServedFixedMalloc(ret, req_size):
 		allocator - kSizeClass*NPS["FixedAllocSafeSize"] -\
 		NPS["m_allocs_offset"]
 	# FixedAlloc.h#L120
-	# GCHeap *m_heap;             //The heap from which we 
-	#							  //obtain memory
-	# int m_heapPartition;		  //The heap partition from which we
-	#							  //obtain memory
-	# uint32_t m_itemsPerBlock;   //Number of items that fit in a block
-	# uint32_t m_itemSize;        //Size of each individual item
-	# FixedBlock* m_firstBlock;   //First block on list of free blocks
-	# FixedBlock* m_lastBlock;    //Last block on list of free blocks
-	# FixedBlock* m_firstFree;    //The lowest priority block that has 
-	#							  //free items
-	# size_t    m_numBlocks;      //Number of blocks owned by this 
-	#							  //allocator
+	# GCHeap *m_heap;            	//The heap from which we 
+	#				//obtain memory
+	# int m_heapPartition;		//The heap partition from which we
+	#				//obtain memory
+	# uint32_t m_itemsPerBlock;	//Number of items that fit in a block
+	# uint32_t m_itemSize;		//Size of each individual item
+	# FixedBlock* m_firstBlock;	//First block on list of free blocks
+	# FixedBlock* m_lastBlock;	//Last block on list of free blocks
+	# FixedBlock* m_firstFree;	//The lowest priority block that has 
+	#				//free items
+	# size_t    m_numBlocks;	//Number of blocks owned by this 
+	#				//allocator
 	if IsheapIsolVersion():
 		heapPartition = pykd.ptrPtr(allocator+0x4)
 	else:
@@ -931,7 +931,7 @@ def monitorHeapAlloc():
 	ntdll = pykd.module( "ntdll" )
 	HeapAllocAddress = ntdll.offset("RtlAllocateHeap")
 	GBP[HeapAllocAddress] = pykd.setBp(HeapAllocAddress, 
-									   allocServedHeapAllocSystem)
+					allocServedHeapAllocSystem)
 
 def findAddress(address):
 	"""Find an allocation in the alloc history dictionary and 
@@ -1110,11 +1110,11 @@ if parse_options():
 			if NPS['list_native'] or NPS["TraceNative"]:
 				# Start resolving Native functions
 				GBP["bpHandlerNative"] = pykd.setBp(func_addr["setNative"], 
-													bpHandlerNative) 
+								bpHandlerNative) 
 			if NPS['list_interp'] or NPS["TraceInterp"]:
 				# Start resolving Interp functions
 				GBP["bpHandlerInterp"] = pykd.setBp(func_addr["setInterp"], 
-													bpHandlerInterp)
+								bpHandlerInterp)
 			for offset in GBP['BP_OFFSETS']:
 				print "[*] Setting break point at address: 0x%x" %\
 					(NPS['base_addr']+offset)
